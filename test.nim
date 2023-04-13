@@ -2,25 +2,22 @@ import std/[
   strutils,
   sequtils,
   os,
+  math,
 ]
 import suru
 import threadpool
 
-const workers = 8 # number of threads (default 8)
-
-echo "MaxThreadPoolSize: ", MaxThreadPoolSize # (default 256)
-echo "CurrentPoolSize: ", workers, "\n"
+let maxThreadPoolSize = MaxThreadPoolSize
+echo "MaxThreadPoolSize: ", maxThreadPoolSize # (default 256)
+const workers = 100
 
 echo "Enter your start number:"
 var start_num = readLine(stdin).parseInt()
 echo "Enter your end number:"
 var end_num = readLine(stdin).parseInt()
 
-
-echo "number pool size: ", end_num - start_num + (start_num == 1).int
-
-if end_num - start_num < workers: # проверка валидности диапазона 
-  end_num = start_num + workers
+let numberPoolSize = end_num - start_num + (start_num == 1).int
+echo "number pool size: ", numberPoolSize
 
 
 proc distribute(arr: seq[int]): seq[seq[int]] = # Распределяет массив между массивами.
@@ -32,11 +29,13 @@ proc distribute(arr: seq[int]): seq[seq[int]] = # Распределяет ма�
     newSeq[i] = arr[start_n ..< end_n]
   return newSeq
 
-func countDivisors(n: int): int = # Функция вычисления количества делений нацело для одного числа
+func countDivisors(n: int): int =
   var count = 0
-  for i in 1..n:
+  for i in 1..int(sqrt(float(n))):
     if n mod i == 0:
-      count += 1
+      count += 2
+      if i * i == n:
+        count -= 1
   return count
 
 proc workerFunc(arr: seq[int]): array[2, int] =
@@ -50,20 +49,17 @@ proc workerFunc(arr: seq[int]): array[2, int] =
 
 proc findMax(arr: array[workers, array[2, int]]): array[2, int] =
   var maxVal: array[2, int]
-  var i: int
   for val in arr:
     if val[0] > maxVal[0]:
       maxVal = val
-    i.inc
   return maxVal
-
 
 
 var workerSeq = distribute(toSeq(start_num..end_num))
 var result_table: array[workers, FlowVar[array[2, int]]]
-
 for i in 0..<workers: # Запускаем каждого worker
   result_table[i] = spawn workerFunc(workerSeq[i]) # [max_dividers, max_dividers_value]
+
 
 var echoTable: array[2, int]
 var result_table_int: array[workers, array[2, int]]
