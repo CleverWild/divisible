@@ -7,9 +7,8 @@ import std/[
 import suru
 import threadpool
 
-let maxThreadPoolSize = MaxThreadPoolSize
-echo "MaxThreadPoolSize: ", maxThreadPoolSize # (default 256)
 const workers = 100
+echo "MaxThreadPoolSize: ", workers # (default 256)
 
 echo "Enter your start number:"
 var start_num = readLine(stdin).parseInt()
@@ -72,5 +71,5 @@ echoTable = findMax(result_table_int)
 
 # echo "\nSanity check = 60 by 12"
 echo "\nrecord: ", echoTable[1], " can be divided by ", echoTable[0], " values", "\n"
-sleep(3000)
+sleep(10000)
 
