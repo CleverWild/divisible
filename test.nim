@@ -78,4 +78,3 @@ echoTable = findMax(result_table_int)
 echo "\nrecord: ", echoTable[1], " can be divided by ", echoTable[0], " values", "\n"
 sleep(3000)
 
-#todo: сделать пользовательский ввод как в файле divisible
