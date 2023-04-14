@@ -4,8 +4,7 @@ import std/[
   os,
   math,
 ]
-import suru
-import threadpool
+import weave
 
 const workers = 100 # Количество потоков
 
@@ -13,13 +12,20 @@ proc distribute(arr: seq[int]): seq[seq[int]] =
   ## Распределяет массив между массивами.
   var newSeq: seq[seq[int]] = newSeqWith(workers, newSeq[int]())
   let n = (arr.len + workers - 1) div workers
+  if arr.len < workers:
+    echo "newSeq: ", newSeqWith(1, arr)
+    return newSeqWith(workers, 1..workers)
   for i in 0..<workers:
     let start_n = i * n
+    echo "start_n: ", start_n
     let end_n = min((i + 1) * n, arr.len)
+    echo "end_n: ", end_n
     newSeq[i] = arr[start_n ..< end_n]
+    echo "newSeq[i]: ", newSeq[i]
+  echo newSeq
   return newSeq
 
-func countDivisors(n: int): int =
+func countDivisors(n: int): int {.thread.} =
   ## Возвращает количество делителей числа `n`.
   var count = 0
   for i in 1..int(sqrt(float(n))):
@@ -29,7 +35,7 @@ func countDivisors(n: int): int =
         count -= 1
   return count
 
-proc workerFunc(arr: seq[int]): array[2, int] =
+func workerFunc(arr: seq[int]): array[2, int] {.thread.} =
   ## Функция работы для каждого worker.
   ##
   ## Возвращает локальный максимум и его значение.
@@ -49,21 +55,10 @@ proc findMax(arr: array[workers, array[2, int]]): array[2, int] =
       maxVal = val
   return maxVal
 
-var inputState = false
-proc timerProc(ms: int = 10000){.thread.} =
-  ## Запускает таймер на `ms` миллисекунд.
-  ##
-  ## По умолчанию `ms` равно 10000 миллисекунд.
-  sleep(ms)
-  if inputState == false:
-    quit(QuitSuccess)
-
-
 
 while true:
   echo "MaxThreadPoolSize: ", workers # (default 256)
 
-  spawn timerProc(10000)
 
   echo "Enter your start number:"
   let start_num = readLine(stdin).parseInt()
@@ -71,25 +66,32 @@ while true:
   let end_num = readLine(stdin).parseInt()
   echo "number pool size: ", end_num - start_num + (start_num == 1).int
 
-  inputState = true
-
 
   var workerSeq = distribute(toSeq(start_num..end_num))
-  var result_table: array[workers, FlowVar[array[2, int]]]
-  for i in 0..<workers: # Запускаем каждого worker
-    result_table[i] = spawn workerFunc(workerSeq[i]) # [max_dividers, max_dividers_value]
+  var result_table: array[workers, array[2, int]]
 
 
-  var echoTable: array[2, int]
-  var result_table_int: array[workers, array[2, int]]
-  var i: int
-  for flowVar in suru(result_table):
-    result_table_int[i] = ^result_table[i]
-    i.inc
-  echoTable = findMax(result_table_int)
+  init(Weave)
+
+  parallelFor i in 0..<workers: # Запускаем каждого worker
+    captures: {workerSeq}
+    result_table[i] = workerFunc(workerSeq[i]) # [max_dividers, max_dividers_value]
+
+  exit(Weave)
+
+
+#   var echoTable: array[2, int]
+#   var result_table_int: array[workers, array[2, int]]
+#   var i: int
+#   for flowVar in suru(result_table):
+#     result_table_int[i] = ^result_table[i]
+#     i.inc
+  let echoTable = findMax(result_table)
 
 
   # echo "\nSanity check = 60 by 12"
   echo "\nrecord: ", echoTable[1], " can be divided by ", echoTable[0],
       " values", "\n"
+  
+  break
 
