@@ -49,21 +49,10 @@ proc findMax(arr: array[workers, array[2, int]]): array[2, int] =
       maxVal = val
   return maxVal
 
-var inputState = false
-proc timerProc(ms: int = 10000){.thread.} =
-  ## Запускает таймер на `ms` миллисекунд.
-  ##
-  ## По умолчанию `ms` равно 10000 миллисекунд.
-  sleep(ms)
-  if inputState == false:
-    quit(QuitSuccess)
-
-
 
 while true:
   echo "MaxThreadPoolSize: ", workers # (default 256)
 
-  spawn timerProc(10000)
 
   echo "Enter your start number:"
   let start_num = readLine(stdin).parseInt()
@@ -71,7 +60,6 @@ while true:
   let end_num = readLine(stdin).parseInt()
   echo "number pool size: ", end_num - start_num + (start_num == 1).int
 
-  inputState = true
 
 
   var workerSeq = distribute(toSeq(start_num..end_num))

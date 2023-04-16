@@ -8,31 +8,22 @@ import weave
 
 const workers = 100 # Количество потоков
 
-proc distribute(arr: seq[int]): seq[seq[int]] =
+func distribute(arr: seq[int]): seq[seq[int]] =
   ## Распределяет массив между массивами.
   var newSeq: seq[seq[int]] = newSeqWith(workers, newSeq[int]())
-  let n = (arr.len + workers - 1) div workers
-  if arr.len < workers:
-    echo "newSeq: ", newSeqWith(1, arr)
-    return newSeqWith(workers, 1..workers)
+  let n: int = (arr.len + workers - 1) div workers
   for i in 0..<workers:
-    let start_n = i * n
-    echo "start_n: ", start_n
-    let end_n = min((i + 1) * n, arr.len)
-    echo "end_n: ", end_n
-    newSeq[i] = arr[start_n ..< end_n]
-    echo "newSeq[i]: ", newSeq[i]
-  echo newSeq
-  return newSeq
+    newSeq[i] = arr[i * n ..< min((i + 1) * n, arr.len)] # start_n ..< end_n
+  return newSeq 
 
-func countDivisors(n: int): int {.thread.} =
+func countDivisors(n: int): int =
   ## Возвращает количество делителей числа `n`.
   var count = 0
   for i in 1..int(sqrt(float(n))):
     if n mod i == 0:
       count += 2
       if i * i == n:
-        count -= 1
+        dec count
   return count
 
 func workerFunc(arr: seq[int]): array[2, int] {.thread.} =
@@ -47,7 +38,7 @@ func workerFunc(arr: seq[int]): array[2, int] {.thread.} =
       max_dividers_value = i
   return [max_dividers, max_dividers_value]
 
-proc findMax(arr: array[workers, array[2, int]]): array[2, int] =
+func findMax(arr: array[workers, array[2, int]]): array[2, int] =
   ## Находит максимальное значение из массива.
   var maxVal: array[2, int]
   for val in arr:
@@ -59,17 +50,14 @@ proc findMax(arr: array[workers, array[2, int]]): array[2, int] =
 while true:
   echo "MaxThreadPoolSize: ", workers # (default 256)
 
-
   echo "Enter your start number:"
   let start_num = readLine(stdin).parseInt()
   echo "Enter your end number:"
-  let end_num = readLine(stdin).parseInt()
+  let end_num = max(readLine(stdin).parseInt(), start_num + workers)
   echo "number pool size: ", end_num - start_num + (start_num == 1).int
-
 
   var workerSeq = distribute(toSeq(start_num..end_num))
   var result_table: array[workers, array[2, int]]
-
 
   init(Weave)
 
@@ -79,16 +67,7 @@ while true:
 
   exit(Weave)
 
-
-#   var echoTable: array[2, int]
-#   var result_table_int: array[workers, array[2, int]]
-#   var i: int
-#   for flowVar in suru(result_table):
-#     result_table_int[i] = ^result_table[i]
-#     i.inc
   let echoTable = findMax(result_table)
-
-
   # echo "\nSanity check = 60 by 12"
   echo "\nrecord: ", echoTable[1], " can be divided by ", echoTable[0],
       " values", "\n"
